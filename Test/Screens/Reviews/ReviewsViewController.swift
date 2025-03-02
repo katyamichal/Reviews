@@ -9,7 +9,8 @@ final class ReviewsViewController: UIViewController {
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
     }
-
+    
+    @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -22,6 +23,7 @@ final class ReviewsViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViewModel()
+        setupViewBinding()
         viewModel.getReviews()
     }
 
@@ -37,11 +39,31 @@ private extension ReviewsViewController {
         reviewsView.tableView.dataSource = viewModel
         return reviewsView
     }
-
+    
     func setupViewModel() {
-        viewModel.onStateChange = { [weak reviewsView] _ in
-            reviewsView?.tableView.reloadData()
+        viewModel.onStateChange = { [weak self] state in
+            switch state.loadingStage {
+            case .firstLoad:
+                self?.reviewsView.stopLoading()
+                self?.reviewsView.tableView.reloadData()
+            case .loaded, .refreshing:
+                self?.reviewsView.tableView.reloadData()
+            case .fail:
+                self?.reviewsView.stopLoading()
+                self?.reviewsView.update(with: state.errorMessage)
+            }
+        }
+        
+        viewModel.onStopRefresh = { [weak self] in
+            self?.reviewsView.stopRefreshControl()
         }
     }
-
+    
+    func setupViewBinding() {
+        reviewsView.onRefresh = { [weak viewModel] in
+           viewModel?.refreshReviews()
+        }
+    }
 }
+
+

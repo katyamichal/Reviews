@@ -5,21 +5,25 @@ final class ReviewsViewModel: NSObject {
 
     /// Замыкание, вызываемое при изменении `state`.
     var onStateChange: ((State) -> Void)?
+    var onStopRefresh: (() -> Void)?
 
     private var state: State
     private let reviewsProvider: ReviewsProvider
     private let ratingRenderer: RatingRenderer
+    private let declensionHelper: DeclensionHelper
     private let decoder: JSONDecoder
 
     init(
         state: State = State(),
         reviewsProvider: ReviewsProvider = ReviewsProvider(),
         ratingRenderer: RatingRenderer = RatingRenderer(),
+        declensionHelper: DeclensionHelper = DeclensionHelper(),
         decoder: JSONDecoder = JSONDecoder()
     ) {
         self.state = state
         self.reviewsProvider = reviewsProvider
         self.ratingRenderer = ratingRenderer
+        self.declensionHelper = declensionHelper
         self.decoder = decoder
     }
 
@@ -33,9 +37,24 @@ extension ReviewsViewModel {
 
     /// Метод получения отзывов.
     func getReviews() {
-        guard state.shouldLoad else { return }
+        loadReviews()
+    }
+
+    func refreshReviews() {
+        loadReviews(isRefreshing: true)
+    }
+    
+    func loadReviews(isRefreshing: Bool = false) {
+        guard state.shouldLoad || isRefreshing else { return }
+        
+        if isRefreshing {
+            state.loadingStage = .refreshing
+        }
+        
         state.shouldLoad = false
-        reviewsProvider.getReviews(offset: state.offset, completion: gotReviews)
+        reviewsProvider.getReviews(offset: state.offset) { [weak self] result in
+            self?.gotReviews(result)
+        }
     }
 
 }
@@ -46,16 +65,36 @@ private extension ReviewsViewModel {
 
     /// Метод обработки получения отзывов.
     func gotReviews(_ result: ReviewsProvider.GetReviewsResult) {
+        
+        if state.loadingStage == .refreshing {
+            state.items = []
+            state.offset = 0
+            onStopRefresh?()
+        }
+        
         do {
             let data = try result.get()
             let reviews = try decoder.decode(Reviews.self, from: data)
             state.items += reviews.items.map(makeReviewItem)
             state.offset += state.limit
             state.shouldLoad = state.offset < reviews.count
+            
+            if !state.shouldLoad {
+                let reviewCountItem = makeReviewCountItem(reviews.count)
+                state.items.append(reviewCountItem)
+             }
+
         } catch {
             state.shouldLoad = true
+            state.errorMessage = ReviewErrors(error).localizedDescription
+            state.loadingStage = .fail
         }
+
         onStateChange?(state)
+        
+        if state.loadingStage != .fail {
+            state.loadingStage = .loaded
+        }
     }
 
     /// Метод, вызываемый при нажатии на кнопку "Показать полностью...".
@@ -69,26 +108,43 @@ private extension ReviewsViewModel {
         state.items[index] = item
         onStateChange?(state)
     }
-
+    
 }
 
 // MARK: - Items
 
 private extension ReviewsViewModel {
-
+    
     typealias ReviewItem = ReviewCellConfig
+    typealias ReviewCountItem = ReviewCountCellConfig
 
     func makeReviewItem(_ review: Review) -> ReviewItem {
         let reviewText = review.text.attributed(font: .text)
         let created = review.created.attributed(font: .created, color: .created)
+        
+        let firstName = review.firstName
+        let lastName = review.lastName
+        let fullName = (firstName + " " + lastName).attributed(font: .username)
+                
         let item = ReviewItem(
+            usernameText: fullName,
+            avatarImageViewName: review.avatarUrl,
+            ratingImage: ratingRenderer.ratingImage(review.rating),
             reviewText: reviewText,
             created: created,
-            onTapShowMore: showMoreReview
+            onTapShowMore: { [weak self] id in
+                self?.showMoreReview(with: id)
+            }
         )
         return item
     }
-
+    
+    func makeReviewCountItem(_ reviewCount: Int) -> ReviewCountItem {
+        let textDeclension = declensionHelper.correctDeclension(for: reviewCount)
+        let reviewCountText = textDeclension.attributed(font: .reviewCount, color: .reviewCount)
+        let item = ReviewCountItem(reviewCountText: reviewCountText)
+        return item
+    }
 }
 
 // MARK: - UITableViewDataSource
@@ -102,7 +158,6 @@ extension ReviewsViewModel: UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let config = state.items[indexPath.row]
         let cell = tableView.dequeueReusableCell(withIdentifier: config.reuseId, for: indexPath)
-        config.update(cell: cell)
         return cell
     }
 
@@ -111,6 +166,10 @@ extension ReviewsViewModel: UITableViewDataSource {
 // MARK: - UITableViewDelegate
 
 extension ReviewsViewModel: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        let config = state.items[indexPath.row]
+        config.update(cell: cell)
+    }
 
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         state.items[indexPath.row].height(with: tableView.bounds.size)

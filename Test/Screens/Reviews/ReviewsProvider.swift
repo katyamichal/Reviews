@@ -1,5 +1,10 @@
 import Foundation
 
+enum GetReviewsError: Error {
+    case badURL
+    case badData(Error)
+}
+
 /// Класс для загрузки отзывов.
 final class ReviewsProvider {
 
@@ -17,27 +22,28 @@ extension ReviewsProvider {
 
     typealias GetReviewsResult = Result<Data, GetReviewsError>
 
-    enum GetReviewsError: Error {
-
-        case badURL
-        case badData(Error)
-
-    }
-
     func getReviews(offset: Int = 0, completion: @escaping (GetReviewsResult) -> Void) {
-        guard let url = bundle.url(forResource: "getReviews.response", withExtension: "json") else {
-            return completion(.failure(.badURL))
-        }
-
-        // Симулируем сетевой запрос - не менять
-        usleep(.random(in: 100_000...1_000_000))
-
-        do {
-            let data = try Data(contentsOf: url)
-            completion(.success(data))
-        } catch {
-            completion(.failure(.badData(error)))
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let url = self?.bundle.url(forResource: "getReviews.response", withExtension: "json") else {
+                DispatchQueue.main.async {
+                    completion(.failure(.badURL))
+                }
+                return
+            }
+            
+            // Симулируем сетевой запрос - не менять
+            usleep(.random(in: 100_000...1_000_000))
+            
+            do {
+                let data = try Data(contentsOf: url)
+                DispatchQueue.main.async {
+                    completion(.success(data))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(.badData(error)))
+                }
+            }
         }
     }
-
 }
