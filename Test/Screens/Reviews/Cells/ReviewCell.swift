@@ -53,7 +53,7 @@ extension ReviewCellConfig: TableCellConfig {
     func height(with size: CGSize) -> CGFloat {
         layout.height(config: self, maxWidth: size.width)
     }
-    
+
 }
 
 // MARK: - Private
@@ -100,6 +100,16 @@ final class ReviewCell: UITableViewCell {
         usernameLabel.frame = layout.usernameLabelFrame
         avatarImageView.frame = layout.avatarImageViewFrame
         ratingImageView.frame = layout.ratingImageViewFrame
+    }
+    
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        reviewTextLabel.attributedText = nil
+        reviewTextLabel.numberOfLines = 0
+        createdLabel.attributedText = nil
+        usernameLabel.attributedText = nil
+        avatarImageView.image = nil
+        ratingImageView.image = nil
     }
 
 }

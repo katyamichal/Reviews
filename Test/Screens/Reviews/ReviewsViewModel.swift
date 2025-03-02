@@ -6,8 +6,6 @@ final class ReviewsViewModel: NSObject {
     /// Замыкание, вызываемое при изменении `state`.
     var onStateChange: ((State) -> Void)?
     var onStopRefresh: (() -> Void)?
-    
-    private let errorMessage = "Что-то пошло не так..."
 
     private var state: State
     private let reviewsProvider: ReviewsProvider
@@ -39,16 +37,20 @@ extension ReviewsViewModel {
 
     /// Метод получения отзывов.
     func getReviews() {
-        guard state.shouldLoad else { return }
-        state.shouldLoad = false
-        
-        reviewsProvider.getReviews(offset: state.offset) { [weak self] result in
-            self?.gotReviews(result)
-        }
+        loadReviews()
+    }
+
+    func refreshReviews() {
+        loadReviews(isRefreshing: true)
     }
     
-    func refreshReviews() {
-        state.loadingStage = .refreshing
+    func loadReviews(isRefreshing: Bool = false) {
+        guard state.shouldLoad || isRefreshing else { return }
+        
+        if isRefreshing {
+            state.loadingStage = .refreshing
+        }
+        
         state.shouldLoad = false
         reviewsProvider.getReviews(offset: state.offset) { [weak self] result in
             self?.gotReviews(result)
@@ -63,9 +65,11 @@ private extension ReviewsViewModel {
 
     /// Метод обработки получения отзывов.
     func gotReviews(_ result: ReviewsProvider.GetReviewsResult) {
+        
         if state.loadingStage == .refreshing {
             state.items = []
             state.offset = 0
+            onStopRefresh?()
         }
         
         do {
@@ -78,17 +82,11 @@ private extension ReviewsViewModel {
             if !state.shouldLoad {
                 let reviewCountItem = makeReviewCountItem(reviews.count)
                 state.items.append(reviewCountItem)
-            }
-            
-            if state.loadingStage == .refreshing {
-                state.loadingStage = .loaded
-                onStopRefresh?()
-            }
-    
+             }
+
         } catch {
             state.shouldLoad = true
-            let errorMessage = errorMessage.attributed(font: .text)
-            state.errorMessage = errorMessage
+            state.errorMessage = ReviewErrors(error).localizedDescription
             state.loadingStage = .fail
         }
 
@@ -110,6 +108,7 @@ private extension ReviewsViewModel {
         state.items[index] = item
         onStateChange?(state)
     }
+    
 }
 
 // MARK: - Items
@@ -159,7 +158,6 @@ extension ReviewsViewModel: UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let config = state.items[indexPath.row]
         let cell = tableView.dequeueReusableCell(withIdentifier: config.reuseId, for: indexPath)
-//        config.update(cell: cell)
         return cell
     }
 

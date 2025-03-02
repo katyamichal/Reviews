@@ -7,6 +7,7 @@ final class ReviewsView: UIView {
     private let errorLabel = UILabel()
     
     private let padding: CGFloat = 16
+    
     let tableView = UITableView()
     var onRefresh: (() -> Void)?
 
