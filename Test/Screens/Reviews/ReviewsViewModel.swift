@@ -35,7 +35,14 @@ extension ReviewsViewModel {
     func getReviews() {
         guard state.shouldLoad else { return }
         state.shouldLoad = false
-        reviewsProvider.getReviews(offset: state.offset, completion: gotReviews)
+//        
+//        if state.loadingStage == .loading || state.loadingStage == .refreshing {
+//            onStateChange?(state)
+//        }
+//        
+        reviewsProvider.getReviews(offset: state.offset) { [weak self] result in
+            self?.gotReviews(result)
+        }
     }
 
 }
@@ -52,9 +59,11 @@ private extension ReviewsViewModel {
             state.items += reviews.items.map(makeReviewItem)
             state.offset += state.limit
             state.shouldLoad = state.offset < reviews.count
+            
         } catch {
             state.shouldLoad = true
         }
+
         onStateChange?(state)
     }
 
@@ -81,10 +90,20 @@ private extension ReviewsViewModel {
     func makeReviewItem(_ review: Review) -> ReviewItem {
         let reviewText = review.text.attributed(font: .text)
         let created = review.created.attributed(font: .created, color: .created)
+        
+        let firstName = review.firstName
+        let lastName = review.lastName
+        let fullName = (firstName + " " + lastName).attributed(font: .username)
+                
         let item = ReviewItem(
+            usernameText: fullName,
+            avatarImageViewName: review.avatarUrl,
+            ratingImage: ratingRenderer.ratingImage(review.rating),
             reviewText: reviewText,
             created: created,
-            onTapShowMore: showMoreReview
+            onTapShowMore: { [weak self] id in
+                self?.showMoreReview(with: id)
+            }
         )
         return item
     }
@@ -102,7 +121,7 @@ extension ReviewsViewModel: UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let config = state.items[indexPath.row]
         let cell = tableView.dequeueReusableCell(withIdentifier: config.reuseId, for: indexPath)
-        config.update(cell: cell)
+//        config.update(cell: cell)
         return cell
     }
 
@@ -111,6 +130,10 @@ extension ReviewsViewModel: UITableViewDataSource {
 // MARK: - UITableViewDelegate
 
 extension ReviewsViewModel: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        let config = state.items[indexPath.row]
+        config.update(cell: cell)
+    }
 
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         state.items[indexPath.row].height(with: tableView.bounds.size)
