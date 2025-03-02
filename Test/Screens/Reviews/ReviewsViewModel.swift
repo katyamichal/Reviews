@@ -9,17 +9,20 @@ final class ReviewsViewModel: NSObject {
     private var state: State
     private let reviewsProvider: ReviewsProvider
     private let ratingRenderer: RatingRenderer
+    private let declensionHelper: DeclensionHelper
     private let decoder: JSONDecoder
 
     init(
         state: State = State(),
         reviewsProvider: ReviewsProvider = ReviewsProvider(),
         ratingRenderer: RatingRenderer = RatingRenderer(),
+        declensionHelper: DeclensionHelper = DeclensionHelper(),
         decoder: JSONDecoder = JSONDecoder()
     ) {
         self.state = state
         self.reviewsProvider = reviewsProvider
         self.ratingRenderer = ratingRenderer
+        self.declensionHelper = declensionHelper
         self.decoder = decoder
     }
 
@@ -60,6 +63,11 @@ private extension ReviewsViewModel {
             state.offset += state.limit
             state.shouldLoad = state.offset < reviews.count
             
+            if !state.shouldLoad {
+                let reviewCountItem = makeReviewCountItem(reviews.count)
+                state.items.append(reviewCountItem)
+            }
+            
         } catch {
             state.shouldLoad = true
         }
@@ -78,14 +86,14 @@ private extension ReviewsViewModel {
         state.items[index] = item
         onStateChange?(state)
     }
-
 }
 
 // MARK: - Items
 
 private extension ReviewsViewModel {
-
+    
     typealias ReviewItem = ReviewCellConfig
+    typealias ReviewCountItem = ReviewCountCellConfig
 
     func makeReviewItem(_ review: Review) -> ReviewItem {
         let reviewText = review.text.attributed(font: .text)
@@ -105,6 +113,14 @@ private extension ReviewsViewModel {
                 self?.showMoreReview(with: id)
             }
         )
+        return item
+    }
+    
+    
+    func makeReviewCountItem(_ reviewCount: Int) -> ReviewCountItem {
+        let textDeclension = declensionHelper.correctDeclension(for: reviewCount)
+        let reviewCountText = textDeclension.attributed(font: .reviewCount, color: .reviewCount)
+        let item = ReviewCountItem(reviewCountText: reviewCountText)
         return item
     }
 
