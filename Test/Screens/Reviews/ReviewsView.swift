@@ -1,17 +1,15 @@
 import UIKit
 
 final class ReviewsView: UIView {
-    
-    var onRefresh: (() -> Void)?
-    
-    let tableView = UITableView()
+
     private let activityIndicator = UIActivityIndicatorView()
     private let refreshControl = UIRefreshControl()
+    private let errorLabel = UILabel()
     
-    private enum Constants {
-        static let activityIndicatorSize: CGFloat = 30
-    }
-    
+    private let padding: CGFloat = 16
+    let tableView = UITableView()
+    var onRefresh: (() -> Void)?
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupView()
@@ -35,7 +33,13 @@ final class ReviewsView: UIView {
     func stopRefreshControl() {
         refreshControl.endRefreshing()
     }
-
+    
+    func update(with error: NSAttributedString?) {
+        tableView.isHidden = true
+        errorLabel.isHidden = false
+        errorLabel.attributedText = error
+        setNeedsLayout()
+    }
 }
 
 // MARK: - Private
@@ -44,6 +48,12 @@ private extension ReviewsView {
     func setupFrames() {
         tableView.frame = bounds.inset(by: safeAreaInsets)
         activityIndicator.center = center
+        NSLayoutConstraint.activate([
+            errorLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
+            errorLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
+            errorLabel.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: padding),
+            errorLabel.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -padding)
+        ])
     }
 
     func setupView() {
@@ -51,6 +61,7 @@ private extension ReviewsView {
         setupTableView()
         setupActivityIndicator()
         setupRefreshControl()
+        setupErrorLabel()
     }
 
     func setupTableView() {
@@ -71,9 +82,18 @@ private extension ReviewsView {
     
     func setupRefreshControl() {
         tableView.refreshControl = refreshControl
-        refreshControl.attributedTitle = NSAttributedString(string: "Обновляем...")
         refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
     }
+    
+    func setupErrorLabel() {
+        addSubview(errorLabel)
+        errorLabel.isHidden = true
+        errorLabel.lineBreakMode = .byWordWrapping
+        errorLabel.numberOfLines = 0
+        errorLabel.translatesAutoresizingMaskIntoConstraints = false
+        errorLabel.textAlignment = .center
+    }
+    
     @objc
     func refresh() {
         refreshControl.beginRefreshing()

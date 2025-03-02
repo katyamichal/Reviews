@@ -42,19 +42,20 @@ private extension ReviewsViewController {
     
     func setupViewModel() {
         viewModel.onStateChange = { [weak self] state in
-            
             switch state.loadingStage {
-                
             case .firstLoad:
-                self?.reviewsView.tableView.reloadData()
                 self?.reviewsView.stopLoading()
-                
-            case .loaded, .refreshing:
                 self?.reviewsView.tableView.reloadData()
-   
+                
+            case .loaded:
+                self?.reviewsView.tableView.reloadData()
+               case .refreshing:
+//                self?.reviewsView.stopRefreshControl()
+                self?.reviewsView.tableView.reloadData()
             case .fail:
                 self?.reviewsView.stopLoading()
-                //  let errorMessage = NSAttributedString(string: "Error")
+                self?.reviewsView.update(with: state.errorMessage)
+                
             }
         }
         

@@ -6,6 +6,8 @@ final class ReviewsViewModel: NSObject {
     /// Замыкание, вызываемое при изменении `state`.
     var onStateChange: ((State) -> Void)?
     var onStopRefresh: (() -> Void)?
+    
+    private let errorMessage = "Что-то пошло не так..."
 
     private var state: State
     private let reviewsProvider: ReviewsProvider
@@ -40,10 +42,6 @@ extension ReviewsViewModel {
         guard state.shouldLoad else { return }
         state.shouldLoad = false
         
-        if state.loadingStage == .refreshing {
-            onStateChange?(state)
-        }
- 
         reviewsProvider.getReviews(offset: state.offset) { [weak self] result in
             self?.gotReviews(result)
         }
@@ -54,6 +52,7 @@ extension ReviewsViewModel {
         state.offset = 0
         state.shouldLoad = true
         state.loadingStage = .refreshing
+        onStateChange?(state)
         getReviews()
     }
 
@@ -65,6 +64,7 @@ private extension ReviewsViewModel {
 
     /// Метод обработки получения отзывов.
     func gotReviews(_ result: ReviewsProvider.GetReviewsResult) {
+        
         do {
             let data = try result.get()
             let reviews = try decoder.decode(Reviews.self, from: data)
@@ -76,15 +76,16 @@ private extension ReviewsViewModel {
                 let reviewCountItem = makeReviewCountItem(reviews.count)
                 state.items.append(reviewCountItem)
             }
-      
             
             if state.loadingStage == .refreshing {
-                onStopRefresh?()
                 state.loadingStage = .loaded
+                onStopRefresh?()
             }
     
         } catch {
             state.shouldLoad = true
+            let errorMessage = errorMessage.attributed(font: .text)
+            state.errorMessage = errorMessage
             state.loadingStage = .fail
         }
 

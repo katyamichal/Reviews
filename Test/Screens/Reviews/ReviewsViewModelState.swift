@@ -1,3 +1,4 @@
+import Foundation
 /// Модель, хранящая состояние вью модели.
 struct ReviewsViewModelState {
 
@@ -6,6 +7,7 @@ struct ReviewsViewModelState {
     var offset = 0
     var shouldLoad = true
     var loadingStage: LoadingStage = .firstLoad
+    var errorMessage: NSAttributedString? = nil
 }
 
 enum LoadingStage {
