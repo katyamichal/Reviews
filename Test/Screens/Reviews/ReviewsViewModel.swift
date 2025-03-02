@@ -48,12 +48,11 @@ extension ReviewsViewModel {
     }
     
     func refreshReviews() {
-        state.items = []
-        state.offset = 0
-        state.shouldLoad = true
         state.loadingStage = .refreshing
-        onStateChange?(state)
-        getReviews()
+        state.shouldLoad = false
+        reviewsProvider.getReviews(offset: state.offset) { [weak self] result in
+            self?.gotReviews(result)
+        }
     }
 
 }
@@ -64,6 +63,10 @@ private extension ReviewsViewModel {
 
     /// Метод обработки получения отзывов.
     func gotReviews(_ result: ReviewsProvider.GetReviewsResult) {
+        if state.loadingStage == .refreshing {
+            state.items = []
+            state.offset = 0
+        }
         
         do {
             let data = try result.get()

@@ -200,28 +200,32 @@ private final class ReviewCellLayout {
     /// Вертикальный отступ от кнопки "Показать полностью..." до времени создания отзыва.
     private let showMoreToCreatedSpacing = 6.0
 
+
     // MARK: - Расчёт фреймов и высоты ячейки
 
     /// Возвращает высоту ячейку с данной конфигурацией `config` и ограничением по ширине `maxWidth`.
     func height(config: Config, maxWidth: CGFloat) -> CGFloat {
         let width = maxWidth - insets.left - insets.right
         var maxY = insets.top
+        
         var insetLeft = insets.left
         var insetRight = insets.right
         
         avatarImageViewFrame = CGRect(origin: CGPoint(x: insets.left, y: maxY), size: Layout.avatarSize)
-        insetLeft = avatarImageViewFrame.maxX + avatarToUsernameSpacing
-        insetRight += avatarToUsernameSpacing
-
-        let currentTextHeight = (config.usernameText.font()?.lineHeight ?? .zero)
         
-        usernameLabelFrame = CGRect(origin: CGPoint(x: insetLeft, y: maxY),
-                                  size: config.usernameText.boundingRect(width: width, height: currentTextHeight).size)
+        insetLeft = avatarImageViewFrame.maxX + avatarToUsernameSpacing
+        
+        insetRight += avatarToUsernameSpacing
+        
+        usernameLabelFrame = CGRect(
+            origin: CGPoint(x: insetLeft, y: maxY),
+
+            size: config.usernameText.boundingRect(width: width).size)
         
         maxY = usernameLabelFrame.maxY + usernameToRatingSpacing
 
-        // Rating
         let ratingImageSize = CGSize(width: config.ratingImage.size.width, height: config.ratingImage.size.height)
+        
         ratingImageViewFrame = CGRect(origin: CGPoint(x: insetLeft, y: maxY), size: ratingImageSize)
 
         maxY = ratingImageViewFrame.maxY + ratingToTextSpacing

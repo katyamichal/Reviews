@@ -46,16 +46,11 @@ private extension ReviewsViewController {
             case .firstLoad:
                 self?.reviewsView.stopLoading()
                 self?.reviewsView.tableView.reloadData()
-                
-            case .loaded:
-                self?.reviewsView.tableView.reloadData()
-               case .refreshing:
-//                self?.reviewsView.stopRefreshControl()
+            case .loaded, .refreshing:
                 self?.reviewsView.tableView.reloadData()
             case .fail:
                 self?.reviewsView.stopLoading()
                 self?.reviewsView.update(with: state.errorMessage)
-                
             }
         }
         
