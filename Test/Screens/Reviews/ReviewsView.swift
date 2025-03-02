@@ -1,9 +1,12 @@
 import UIKit
 
 final class ReviewsView: UIView {
-
+    
+    var onRefresh: (() -> Void)?
+    
     let tableView = UITableView()
     private let activityIndicator = UIActivityIndicatorView()
+    private let refreshControl = UIRefreshControl()
     
     private enum Constants {
         static let activityIndicatorSize: CGFloat = 30
@@ -28,6 +31,10 @@ final class ReviewsView: UIView {
         activityIndicator.stopAnimating()
         tableView.isHidden = false
     }
+    
+    func stopRefreshControl() {
+        refreshControl.endRefreshing()
+    }
 
 }
 
@@ -43,6 +50,7 @@ private extension ReviewsView {
         backgroundColor = .systemBackground
         setupTableView()
         setupActivityIndicator()
+        setupRefreshControl()
     }
 
     func setupTableView() {
@@ -60,5 +68,15 @@ private extension ReviewsView {
         activityIndicator.startAnimating()
         activityIndicator.hidesWhenStopped = true
     }
-
+    
+    func setupRefreshControl() {
+        tableView.refreshControl = refreshControl
+        refreshControl.attributedTitle = NSAttributedString(string: "Обновляем...")
+        refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
+    }
+    @objc
+    func refresh() {
+        refreshControl.beginRefreshing()
+        onRefresh?()
+    }
 }

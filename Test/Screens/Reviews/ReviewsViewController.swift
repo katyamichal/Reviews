@@ -23,6 +23,7 @@ final class ReviewsViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViewModel()
+        setupViewBinding()
         viewModel.getReviews()
     }
 
@@ -41,16 +42,30 @@ private extension ReviewsViewController {
     
     func setupViewModel() {
         viewModel.onStateChange = { [weak self] state in
+            
             switch state.loadingStage {
+                
             case .firstLoad:
                 self?.reviewsView.tableView.reloadData()
                 self?.reviewsView.stopLoading()
+                
             case .loaded, .refreshing:
                 self?.reviewsView.tableView.reloadData()
+   
             case .fail:
                 self?.reviewsView.stopLoading()
                 //  let errorMessage = NSAttributedString(string: "Error")
             }
+        }
+        
+        viewModel.onStopRefresh = { [weak self] in
+            self?.reviewsView.stopRefreshControl()
+        }
+    }
+    
+    func setupViewBinding() {
+        reviewsView.onRefresh = { [weak viewModel] in
+           viewModel?.refreshReviews()
         }
     }
 }

@@ -5,6 +5,7 @@ final class ReviewsViewModel: NSObject {
 
     /// Замыкание, вызываемое при изменении `state`.
     var onStateChange: ((State) -> Void)?
+    var onStopRefresh: (() -> Void)?
 
     private var state: State
     private let reviewsProvider: ReviewsProvider
@@ -42,9 +43,18 @@ extension ReviewsViewModel {
         if state.loadingStage == .refreshing {
             onStateChange?(state)
         }
+ 
         reviewsProvider.getReviews(offset: state.offset) { [weak self] result in
             self?.gotReviews(result)
         }
+    }
+    
+    func refreshReviews() {
+        state.items = []
+        state.offset = 0
+        state.shouldLoad = true
+        state.loadingStage = .refreshing
+        getReviews()
     }
 
 }
@@ -66,7 +76,13 @@ private extension ReviewsViewModel {
                 let reviewCountItem = makeReviewCountItem(reviews.count)
                 state.items.append(reviewCountItem)
             }
+      
             
+            if state.loadingStage == .refreshing {
+                onStopRefresh?()
+                state.loadingStage = .loaded
+            }
+    
         } catch {
             state.shouldLoad = true
             state.loadingStage = .fail
@@ -74,8 +90,9 @@ private extension ReviewsViewModel {
 
         onStateChange?(state)
         
-        if state.loadingStage == .firstLoad || state.loadingStage != .fail
-        { state.loadingStage = .loaded }
+        if state.loadingStage != .fail {
+            state.loadingStage = .loaded
+        }
     }
 
     /// Метод, вызываемый при нажатии на кнопку "Показать полностью...".
@@ -125,7 +142,6 @@ private extension ReviewsViewModel {
         let item = ReviewCountItem(reviewCountText: reviewCountText)
         return item
     }
-
 }
 
 // MARK: - UITableViewDataSource
