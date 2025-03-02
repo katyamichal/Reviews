@@ -38,11 +38,21 @@ private extension ReviewsViewController {
         reviewsView.tableView.dataSource = viewModel
         return reviewsView
     }
-
+    
     func setupViewModel() {
-        viewModel.onStateChange = { [weak self] _ in
-            self?.reviewsView.tableView.reloadData()
+        viewModel.onStateChange = { [weak self] state in
+            switch state.loadingStage {
+            case .firstLoad:
+                self?.reviewsView.tableView.reloadData()
+                self?.reviewsView.stopLoading()
+            case .loaded, .refreshing:
+                self?.reviewsView.tableView.reloadData()
+            case .fail:
+                self?.reviewsView.stopLoading()
+                //  let errorMessage = NSAttributedString(string: "Error")
+            }
         }
     }
-
 }
+
+

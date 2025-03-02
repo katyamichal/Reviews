@@ -21,6 +21,7 @@ extension ReviewsProvider {
 
         case badURL
         case badData(Error)
+//        case error
         
     }
     
@@ -40,6 +41,7 @@ extension ReviewsProvider {
                 let data = try Data(contentsOf: url)
                 DispatchQueue.main.async {
                     completion(.success(data))
+                  //  completion(.failure(.error))
                 }
             } catch {
                 DispatchQueue.main.async {

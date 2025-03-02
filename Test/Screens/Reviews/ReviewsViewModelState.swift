@@ -5,5 +5,12 @@ struct ReviewsViewModelState {
     var limit = 20
     var offset = 0
     var shouldLoad = true
+    var loadingStage: LoadingStage = .firstLoad
+}
 
+enum LoadingStage {
+    case firstLoad
+    case loaded
+    case refreshing
+    case fail
 }

@@ -38,11 +38,10 @@ extension ReviewsViewModel {
     func getReviews() {
         guard state.shouldLoad else { return }
         state.shouldLoad = false
-//        
-//        if state.loadingStage == .loading || state.loadingStage == .refreshing {
-//            onStateChange?(state)
-//        }
-//        
+        
+        if state.loadingStage == .refreshing {
+            onStateChange?(state)
+        }
         reviewsProvider.getReviews(offset: state.offset) { [weak self] result in
             self?.gotReviews(result)
         }
@@ -70,9 +69,13 @@ private extension ReviewsViewModel {
             
         } catch {
             state.shouldLoad = true
+            state.loadingStage = .fail
         }
 
         onStateChange?(state)
+        
+        if state.loadingStage == .firstLoad || state.loadingStage != .fail
+        { state.loadingStage = .loaded }
     }
 
     /// Метод, вызываемый при нажатии на кнопку "Показать полностью...".
@@ -115,7 +118,6 @@ private extension ReviewsViewModel {
         )
         return item
     }
-    
     
     func makeReviewCountItem(_ reviewCount: Int) -> ReviewCountItem {
         let textDeclension = declensionHelper.correctDeclension(for: reviewCount)
